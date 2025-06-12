@@ -132,8 +132,6 @@ struct Object
 
 std::unordered_map<std::string, Material> materiais;
 std::string nomeMaterial;
-// Object obj;
-// Object obj2;
 
 Object objs[2];
 

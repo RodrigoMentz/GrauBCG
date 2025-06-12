@@ -78,7 +78,7 @@ uniform sampler2D texBuff;
 uniform vec3 lightPos;
 uniform vec3 camPos;
 uniform float ka;
-uniform float ke;
+uniform float kd;
 uniform float ks;
 uniform float q;
 out vec4 color;
@@ -99,7 +99,7 @@ void main()
 	vec3 N = normalize(vNormal);
 	vec3 L = normalize(lightPos - vec3(fragPos));
 	float diff = max(dot(N, L),0.0);
-	vec3 diffuse = ke * diff * lightColor;
+	vec3 diffuse = kd * diff * lightColor;
 
 	//Coeficiente de reflexão especular
 	vec3 R = normalize(reflect(-L,N));
@@ -113,18 +113,24 @@ void main()
 
 })";
 
+struct Material {
+	glm::vec3 ka;
+	glm::vec3 kd;
+	glm::vec3 ks;
+	std::string textureFile;
+};
+
 struct Object
 {
 	GLuint VAO; //Índice do buffer de geometria
 	GLuint texID; //Identificador da textura carregada
 	int nVertices; //nro de vértices
-};
-
-struct Material {
-    glm::vec3 ka;
-    glm::vec3 ks;
-    glm::vec3 ke;
-    std::string textureFile;
+	glm::mat4 model;
+	float posX = 0.0f, posY = 0.0f, posZ = 0.0f;
+	float tamanhoEscala = 1.0f;
+	bool rotateX=false, rotateY=false, rotateZ=false;
+	Material material;
+	int TextureimgWidth, TextureimgHeight;
 };
 
 std::unordered_map<std::string, Material> materiais;
@@ -139,6 +145,9 @@ float rotacaoYaw = -90.0, rotaocaoPitch = 0.0; //rotação em x e y
 float deltaTime = 0.0f; // Tempo entre o frame atual e o anterior
 float lastFrame = 0.0f; // Tempo do último frame
 float fov = 45.0f;
+int indiceObjetoSelecionado = 0;
+
+Object objs[2];
 
 // Função MAIN
 int main()
@@ -147,7 +156,7 @@ int main()
 	glfwInit();
 
 	// Criação da janela GLFW
-	GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Desafio M5 - Rodrigo Korte Mentz", nullptr, nullptr);
+	GLFWwindow *window = glfwCreateWindow(WIDTH, HEIGHT, "Prova GB - Rodrigo Korte Mentz", nullptr, nullptr);
 	glfwMakeContextCurrent(window);
 
 	// Fazendo o registro da função de callback para a janela GLFW
@@ -177,15 +186,9 @@ int main()
 	// Compilando e buildando o programa de shader
 	GLuint shaderID = setupShader();
 
-	Object obj;
-    
-	obj.VAO = loadSimpleOBJ("../assets/Modelos3D/Skeletal_Stego.obj", obj.nVertices);
-
-    Material mat = materiais["MM_Dino"];
-    cout << "Conferir material.textureFile: " << mat.textureFile << endl;
-	// Carregando uma textura e armazenando seu id
-	int imgWidth, imgHeight;
-	obj.texID = loadTexture("../assets/Modelos3D/" + mat.textureFile,imgWidth,imgHeight);
+	objs[0].VAO = loadSimpleOBJ("../assets/Modelos3D/Skeletal_Stego.obj", objs[0].nVertices);
+	objs[0].material = materiais["MM_Dino"];
+	objs[0].texID = loadTexture("../assets/Modelos3D/" + objs[0].material.textureFile, objs[0].TextureimgWidth,objs[0].TextureimgHeight);
 
     float q = 10.0;
     vec3 lightPos = vec3(0.6, 1.2, -0.5);
@@ -203,10 +206,6 @@ int main()
     
 	// Enviar a informação de qual variável armazenará o buffer da textura
 	glUniform1i(glGetUniformLocation(shaderID, "texBuff"), 0);
-    
-    glUniform1f(glGetUniformLocation(shaderID, "ka"), mat.ka.r);
-	glUniform1f(glGetUniformLocation(shaderID, "ke"), mat.ke.r);
-	glUniform1f(glGetUniformLocation(shaderID, "ks"), mat.ks.r);
 	glUniform1f(glGetUniformLocation(shaderID, "q"), q);
 	glUniform3f(glGetUniformLocation(shaderID, "lightPos"), lightPos.x,lightPos.y,lightPos.z);
     
@@ -274,9 +273,35 @@ int main()
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // cor de fundo
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		glBindVertexArray(obj.VAO); // Conectando ao buffer de geometria
-		glBindTexture(GL_TEXTURE_2D, obj.texID); //conectando com o buffer de textura que será usado no draw
-		glDrawArrays(GL_TRIANGLES, 0, obj.nVertices);
+        float angle = (GLfloat)glfwGetTime();
+		for (Object& obj : objs) {
+			obj.model = glm::mat4(1.0f);
+			if (obj.rotateX)
+			{
+				obj.model = glm::rotate(obj.model, angle, glm::vec3(1.0f, 0.0f, 0.0f));
+			}
+			else if (obj.rotateY)
+			{
+				obj.model = glm::rotate(obj.model, angle, glm::vec3(0.0f, 1.0f, 0.0f));
+			}
+			else if (obj.rotateZ)
+			{
+				obj.model = glm::rotate(obj.model, angle, glm::vec3(0.0f, 0.0f, 1.0f));
+			}
+			obj.model = glm::scale(obj.model, glm::vec3(obj.tamanhoEscala));
+
+			obj.model = glm::translate(obj.model, glm::vec3(obj.posX, obj.posY, obj.posZ));
+
+			glUniformMatrix4fv(glGetUniformLocation(shaderID, "model"), 1, GL_FALSE, value_ptr(obj.model));
+
+			glUniform1f(glGetUniformLocation(shaderID, "ka"), obj.material.ka.r); 
+            glUniform1f(glGetUniformLocation(shaderID, "kd"), obj.material.kd.r);
+            glUniform1f(glGetUniformLocation(shaderID, "ks"), obj.material.ks.r);
+
+			glBindVertexArray(obj.VAO); // Conectando ao buffer de geometria
+			glBindTexture(GL_TEXTURE_2D, obj.texID); //conectando com o buffer de textura que será usado no draw
+			glDrawArrays(GL_TRIANGLES, 0, obj.nVertices);
+		}
 
 		glBindVertexArray(0); // Desconectando o buffer de geometria
 
@@ -284,7 +309,9 @@ int main()
 		glfwSwapBuffers(window);
 	}
 	// Pede pra OpenGL desalocar os buffers
-	glDeleteVertexArrays(1, &obj.VAO);
+	for (Object& obj : objs) {
+		glDeleteVertexArrays(1, &obj.VAO);
+	}
 	// Finaliza a execução da GLFW, limpando os recursos alocados por ela
 	glfwTerminate();
 	return 0;
@@ -312,6 +339,87 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
             cout << "rotacaoYaw: " << rotacaoYaw << endl;
             cout << "rotaocaoPitch: " << rotaocaoPitch << endl;
         }
+
+        if (key == GLFW_KEY_1 && action == GLFW_PRESS)
+    {
+        indiceObjetoSelecionado = 0;
+        cout << "Objeto 1 selecionado" << endl;
+    }
+    if (key == GLFW_KEY_2 && action == GLFW_PRESS)
+    {
+        if (sizeof(objs) / sizeof(objs[0]) > 1) {
+            indiceObjetoSelecionado = 1;
+            cout << "Objeto 2 selecionado" << endl;
+        } else {
+            cout << "Objeto 2 não existe" << endl;
+        }
+    }
+
+    if (key == GLFW_KEY_X && action == GLFW_PRESS)
+    {
+        objs[indiceObjetoSelecionado].rotateX = true;
+        objs[indiceObjetoSelecionado].rotateY = false;
+        objs[indiceObjetoSelecionado].rotateZ = false;
+    }
+
+    if (key == GLFW_KEY_Y && action == GLFW_PRESS)
+    {
+        objs[indiceObjetoSelecionado].rotateX = false;
+        objs[indiceObjetoSelecionado].rotateY = true;
+        objs[indiceObjetoSelecionado].rotateZ = false;
+    }
+
+    if (key == GLFW_KEY_Z && action == GLFW_PRESS)
+    {
+        objs[indiceObjetoSelecionado].rotateX = false;
+        objs[indiceObjetoSelecionado].rotateY = false;
+        objs[indiceObjetoSelecionado].rotateZ = true;
+    }
+
+    if (key == GLFW_KEY_UP && action == GLFW_PRESS)
+    {
+        objs[indiceObjetoSelecionado].posY += 0.1f;
+    }
+
+    if (key == GLFW_KEY_DOWN && action == GLFW_PRESS)
+    {
+        objs[indiceObjetoSelecionado].posY -= 0.1f;
+    }
+
+    if (key == GLFW_KEY_LEFT && action == GLFW_PRESS)
+    {
+        objs[indiceObjetoSelecionado].posX -= 0.1f;
+    }
+
+    if (key == GLFW_KEY_RIGHT && action == GLFW_PRESS)
+    {
+        objs[indiceObjetoSelecionado].posX += 0.1f;
+    }
+
+    if (key == GLFW_KEY_KP_ADD && action == GLFW_PRESS) // Tecla + do teclado numérico
+    {
+        objs[indiceObjetoSelecionado].posZ += 0.1f;
+    }
+    
+    if (key == GLFW_KEY_KP_SUBTRACT && action == GLFW_PRESS) // Tecla - do teclado numérico
+    {
+        objs[indiceObjetoSelecionado].posZ -= 0.1f;
+    }
+
+    if (key == GLFW_KEY_U && action == GLFW_PRESS)
+    {
+        objs[indiceObjetoSelecionado].tamanhoEscala += 0.1f;
+    }
+
+    if (key == GLFW_KEY_H && action == GLFW_PRESS)
+    {
+        if (objs[indiceObjetoSelecionado].tamanhoEscala < 0.1f)
+        {
+            objs[indiceObjetoSelecionado].tamanhoEscala = 0.1f;
+        } else {
+            objs[indiceObjetoSelecionado].tamanhoEscala -= 0.1f;
+        }
+    }
 }
 
 void mouse_callback(GLFWwindow *window, double xpos, double ypos)
@@ -483,7 +591,6 @@ GLuint loadTexture(string filePath, int &width, int &height)
 int loadSimpleOBJ(string filePATH, int &nVertices)
  {
     std::string nomeArquivoMtl;
-    float ka, ks, ke;
     std::vector<glm::vec3> vertices;
     std::vector<glm::vec2> texCoords;
     std::vector<glm::vec3> normals;
@@ -591,12 +698,12 @@ int loadSimpleOBJ(string filePATH, int &nVertices)
                     ssmtl >> materiais[nomeMaterial].ka.r >> materiais[nomeMaterial].ka.g >> materiais[nomeMaterial].ka.b;
                 }
 
-                if (mtlWord == "Ks") {
-                    ssmtl >> materiais[nomeMaterial].ks.r >> materiais[nomeMaterial].ks.g >> materiais[nomeMaterial].ks.b;
+                if (mtlWord == "Kd") {
+                    ssmtl >> materiais[nomeMaterial].kd.r >> materiais[nomeMaterial].kd.g >> materiais[nomeMaterial].kd.b;
                 }
 
-                if (mtlWord == "Ke") {
-                    ssmtl >> materiais[nomeMaterial].ke.r >> materiais[nomeMaterial].ke.g >> materiais[nomeMaterial].ke.b;
+                if (mtlWord == "Ks") {
+                    ssmtl >> materiais[nomeMaterial].ks.r >> materiais[nomeMaterial].ks.g >> materiais[nomeMaterial].ks.b;
                 }
 
                 if (mtlWord == "map_Kd") {
