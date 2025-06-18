@@ -50,6 +50,7 @@ set(EXERCISES
     ObjComPhong
     ProvaGB
     ProvaGbComSkyBox
+    ProvaGbFinal
 )
 
 add_compile_options(-Wno-pragmas)

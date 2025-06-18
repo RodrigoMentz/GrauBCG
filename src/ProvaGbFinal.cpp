@@ -231,7 +231,7 @@ void initializeCatmullRomMatrix(glm::mat4x4 &matrix);
 void generateCatmullRomCurvePoints(Curve &curve, int numPoints);
 void displayCurve(const Curve &curve);
 GLuint generateControlPointsBuffer(vector<glm::vec3> controlPoints);
-void loadSceneConfiguration(const std::string& configFilePath, std::vector<Object>& objs, glm::vec3& cameraPos, glm::vec3& cameraFront, glm::vec3& cameraUp, float& rotacaoYaw, float& rotaocaoPitch);
+void loadSceneConfiguration(const std::string& configFilePath, std::vector<Object>& objs, glm::vec3& cameraPos, glm::vec3& cameraFront, glm::vec3& cameraUp, float& rotacaoYaw, float& rotaocaoPitch, glm::vec3& lightPos);
 
 std::unordered_map<std::string, Material> materiais;
 std::string nomeMaterial;
@@ -246,8 +246,9 @@ float deltaTime = 0.0f; // Tempo entre o frame atual e o anterior
 float lastFrame = 0.0f; // Tempo do último frame
 float fov = 45.0f;
 int indiceObjetoSelecionado = 0;
+vec3 lightPos = glm::vec3(0.0f);
 
-int index = 0;
+int indexCatmull = 0;
 float lastTime = 0.0;
 float FPS = 60.0;
 float angleObj = 0.0;
@@ -293,7 +294,6 @@ int main()
 	GLuint shaderID = setupShader();
 
     GLuint skyboxShaderID = setupSkyboxShader();
-
     // Configuração do Skybox VAO/VBO
     GLuint skyboxVAO, skyboxVBO;
     glGenVertexArrays(1, &skyboxVAO);
@@ -305,12 +305,12 @@ int main()
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     vector<std::string> faces
     {
-        "../assets/skybox/posx.jpg",  // +X (direita)
-        "../assets/skybox/negx.jpg",  // -X (esquerda)
-        "../assets/skybox/posy.jpg",  // +Y (topo)
-        "../assets/skybox/negy.jpg", // -Y (fundo)
-        "../assets/skybox/posz.jpg",  // +Z (frente)
-        "../assets/skybox/negz.jpg"   // -Z (trás)
+        "../assets/skybox/posx.jpg",
+        "../assets/skybox/negx.jpg",
+        "../assets/skybox/posy.jpg",
+        "../assets/skybox/negy.jpg",
+        "../assets/skybox/posz.jpg",
+        "../assets/skybox/negz.jpg"
     };
     GLuint cubemapTexture = loadCubemap(faces);
 
@@ -322,11 +322,10 @@ int main()
     GLuint VAOControl = generateControlPointsBuffer(curvaCatmull.controlPoints);
     GLuint VAOCatmullCurve = generateControlPointsBuffer(curvaCatmull.curvePoints);
 
-
-    loadSceneConfiguration("../assets/configuracoesCena.txt", objs, cameraPos, cameraFront, cameraUp, rotacaoYaw, rotaocaoPitch);
+    loadSceneConfiguration("../assets/configuracoesCena.txt", objs, cameraPos, cameraFront, cameraUp, rotacaoYaw, rotaocaoPitch, lightPos);
 
     float q = 10.0;
-    vec3 lightPos = vec3(0.6, 1.2, -0.5);
+    lightPos = vec3(0.6, 1.2, -0.5);
     glm::mat4 view;
 	mat4 model = mat4(1); // matriz identidade
 
@@ -364,7 +363,6 @@ int main()
 
 	//Ativando o primeiro buffer de textura da OpenGL
 	glActiveTexture(GL_TEXTURE0);
-	
 	glEnable(GL_DEPTH_TEST);
 
 
@@ -377,7 +375,7 @@ int main()
         
 		glfwPollEvents();
         updateCameraPos(window);
-
+        // CAMERA
         glm::vec3 front;
         front.x = cos(glm::radians(rotaocaoPitch)) * cos(glm::radians(rotacaoYaw));
         front.y = sin(glm::radians(rotaocaoPitch));
@@ -400,15 +398,12 @@ int main()
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // cor de fundo
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
         // ----------------------------------------------------
         // SKYBOX
-        glDepthFunc(GL_LEQUAL); // Mude a função de profundidade: passa se Z < ou = ao Z atual
+        glDepthFunc(GL_LEQUAL);
         glUseProgram(skyboxShaderID);
 
-        // A matriz 'view' do skybox deve remover a translação da câmera
-        // Isso faz com que o skybox gire com a câmera, mas permaneça no "infinito"
-        glm::mat4 skyboxView = glm::mat4(glm::mat3(view)); // Remove a parte da translação (última coluna/linha)
+        glm::mat4 skyboxView = glm::mat4(glm::mat3(view));
         glUniformMatrix4fv(skyboxViewLoc, 1, GL_FALSE, glm::value_ptr(skyboxView));
         glUniformMatrix4fv(skyboxProjLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
@@ -430,16 +425,14 @@ int main()
         glUniform1i(glGetUniformLocation(shaderID, "isCurveOrControlPoint"), 1);
         glBindVertexArray(VAOCatmullCurve);
         glUniform3f(glGetUniformLocation(shaderID, "fixedColor"), 1.0f, 1.0f, 1.0f);
-        glDrawArrays(GL_LINE_STRIP, 0, curvaCatmull.curvePoints.size()); // Desenha a curva como uma linha contínua
+        glDrawArrays(GL_LINE_STRIP, 0, curvaCatmull.curvePoints.size());
 
-        // Desenhar pontos de controle maiores e com cor diferenciada
-        glBindVertexArray(VAOControl);
-        glUniform3f(glGetUniformLocation(shaderID, "fixedColor"), 0.0f, 1.0f, 0.0f);
-        glPointSize(12.0f);
-        glDrawArrays(GL_POINTS, 0, curvaCatmull.controlPoints.size());
+        // glBindVertexArray(VAOControl);
+        // glUniform3f(glGetUniformLocation(shaderID, "fixedColor"), 0.0f, 1.0f, 0.0f);
+        // glPointSize(12.0f);
+        // glDrawArrays(GL_POINTS, 0, curvaCatmull.controlPoints.size());
         glBindVertexArray(0);
 
-        // Indica ao shader que voltamos a desenhar objetos 3D
         glUniform1i(glGetUniformLocation(shaderID, "isCurveOrControlPoint"), 0);
         // ----------------------------------------------------
         // MOVER O OBJETO NA CURVA
@@ -449,9 +442,9 @@ int main()
         float dt = now - lastTime;
         if (dt >= 1 / FPS)
         {
-            index = (index + 1) % curvaCatmull.curvePoints.size(); // incrementando ciclicamente o indice do Frame
+            indexCatmull = (indexCatmull + 1) % curvaCatmull.curvePoints.size(); // incrementando ciclicamente o indice do Frame
             lastTime = now;
-            glm::vec3 nextPos = curvaCatmull.curvePoints[index];
+            glm::vec3 nextPos = curvaCatmull.curvePoints[indexCatmull];
             glm::vec3 currentPos = glm::vec3(objs[0].posX, objs[0].posY, objs[0].posZ);
             glm::vec3 dir = glm::normalize(nextPos - currentPos);
 
@@ -459,24 +452,9 @@ int main()
             objs[0].posY = nextPos.y;
             objs[0].posZ = nextPos.z;
 
-            angleObj = atan2(dir.x, dir.z) + glm::radians(+0.0f);
+            angleObj = atan2(dir.x, dir.y) + glm::radians(-90.0f);
+            objs[0].AnguloRotacao = angleObj;
         }
-        // Calcula o ângulo para rotação do objeto (se o objeto tem uma "frente")
-        // atan2(dir.y, dir.x) calcula o ângulo no plano XY.
-        // Se sua curva está no plano XZ, você precisará usar atan2(dir.z, dir.x)
-        // E o offset de -90.0f depende da orientação padrão do seu modelo.
-        // angleObj = atan2(dir.y, dir.x) + glm::radians(-90.0f); // Se o obj estiver no plano XY
-        
-        // Se a curva está no plano XZ (como nos exemplos anteriores), a rotação é em Y
-        // O vetor 'dir' no plano XZ é (dir.x, dir.z).
-        // O ângulo em radianos no plano XZ, em relação ao eixo X positivo:
-        // angleObj = atan2(dir.z, dir.x); // Angulo em radianos
-        // Se o seu modelo padrão aponta para +X e você quer que ele aponte na direção do movimento,
-        // o atan2(Z, X) dá o ângulo em relação ao eixo X positivo.
-        // Se o seu modelo aponta para +Z, adicione glm::radians(-90.0f) ou +90.0f
-        // Dependendo da sua convenção de "frente" do modelo.
-        // Você vai precisar aplicar isso na matriz 'model' do objeto
-
         // ----------------------------------------------------
         // DESENHO DOS OBJS
         glUseProgram(shaderID); // Ativa o shader dos seus objetos
@@ -488,10 +466,12 @@ int main()
         glUniform3f(glGetUniformLocation(shaderID, "lightPos"), lightPos.x,lightPos.y,lightPos.z);
 
         float angle = (GLfloat)glfwGetTime();
+        float defaultrotator = glm::radians(90.0f);
 		for (Object& obj : objs) {
 			obj.model = glm::mat4(1.0f);
             obj.model = glm::translate(obj.model, glm::vec3(obj.posX, obj.posY, obj.posZ));
-            obj.model = glm::rotate(obj.model, angleObj, glm::vec3(0.0f, 1.0f, 0.0f));
+            obj.model = glm::rotate(obj.model, defaultrotator, glm::vec3(0.0f, 1.0f, 0.0f));
+            obj.model = glm::rotate(obj.model, obj.AnguloRotacao, glm::vec3(1.0f, 0.0f, 0.0f));
 
 			if (obj.rotateX)
 			{
@@ -536,9 +516,6 @@ int main()
 	return 0;
 }
 
-// Função de callback de teclado - só pode ter uma instância (deve ser estática se
-// estiver dentro de uma classe) - É chamada sempre que uma tecla for pressionada
-// ou solta via GLFW
 void key_callback(GLFWwindow *window, int key, int scancode, int action, int mode)
 {
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -566,11 +543,20 @@ void key_callback(GLFWwindow *window, int key, int scancode, int action, int mod
     }
     if (key == GLFW_KEY_2 && action == GLFW_PRESS)
     {
-        if (sizeof(objs) / sizeof(objs[0]) > 1) {
+        if (objs.size() > 1) {
             indiceObjetoSelecionado = 1;
             cout << "Objeto 2 selecionado" << endl;
         } else {
             cout << "Objeto 2 não existe" << endl;
+        }
+    }
+    if (key == GLFW_KEY_3 && action == GLFW_PRESS)
+    {
+        if (objs.size() > 2) {
+            indiceObjetoSelecionado = 2;
+            cout << "Objeto 3 selecionado" << endl;
+        } else {
+            cout << "Objeto 3 não existe" << endl;
         }
     }
 
@@ -1000,7 +986,7 @@ GLuint loadCubemap(vector<std::string> faces)
         }
         else
         {
-            std::cout << "Cubemap texture failed to load at path: " << faces[i] << std::endl;
+            std::cout << "Erro ao tentar ler o cubemap do arquivo: " << faces[i] << std::endl;
             stbi_image_free(data);
         }
     }
@@ -1094,13 +1080,12 @@ std::vector<glm::vec3> loadPontosDaCurvaDoArquivo(const std::string& filePath)
     std::vector<glm::vec3> controlPoints;
     std::ifstream file(filePath);
     if (!file.is_open()) {
-        std::cerr << "Erro: Nao foi possivel abrir o arquivo de pontos de controle: " << filePath << std::endl;
-        return controlPoints; // Retorna vetor vazio
+        std::cerr << "Erro ao tentar ler o arquivo dos pontos de controle: " << filePath << std::endl;
+        return controlPoints;
     }
 
     std::string line;
     while (std::getline(file, line)) {
-        // Ignora linhas de comentário ou vazias
         if (line.empty() || line[0] == '#') {
             continue;
         }
@@ -1116,8 +1101,7 @@ std::vector<glm::vec3> loadPontosDaCurvaDoArquivo(const std::string& filePath)
     file.close();
     return controlPoints;
 }
-
-void loadSceneConfiguration(const std::string& configFilePath, std::vector<Object>& objs, glm::vec3& cameraPos, glm::vec3& cameraFront, glm::vec3& cameraUp, float& rotacaoYaw, float& rotaocaoPitch)
+void loadSceneConfiguration(const std::string& configFilePath, std::vector<Object>& objs, glm::vec3& cameraPos, glm::vec3& cameraFront, glm::vec3& cameraUp, float& rotacaoYaw, float& rotaocaoPitch, glm::vec3& lightPos)
 {
     std::ifstream configFile(configFilePath);
     if (!configFile.is_open()) {
@@ -1128,8 +1112,8 @@ void loadSceneConfiguration(const std::string& configFilePath, std::vector<Objec
     std::string line;
     bool inObjectBlock = false;
     bool inCameraBlock = false;
-    Object currentObject; // Objeto temporario para armazenar dados antes de adicionar ao vetor
-
+    bool inLightBlock = false;
+    Object currentObject;
     while (std::getline(configFile, line)) {
         std::stringstream ss(line);
         std::string tag;
@@ -1138,34 +1122,29 @@ void loadSceneConfiguration(const std::string& configFilePath, std::vector<Objec
         if (tag == "<OBJECT>") {
             inObjectBlock = true;
             inCameraBlock = false;
-            // Inicializa um novo objeto para este bloco
-            currentObject = Object(); // Garante que e um objeto limpo
-            currentObject.AnguloRotacao = 0.0f; // Default
+            currentObject = Object();
             currentObject.posX = 0.0f; currentObject.posY = 0.0f; currentObject.posZ = 0.0f;
+            currentObject.rotateX = false; currentObject.rotateY = false; currentObject.rotateZ = false;
             currentObject.tamanhoEscala = 1.0f;
-            currentObject.model = glm::mat4(1.0f); // Default
+            currentObject.model = glm::mat4(1.0f);
             
         } else if (tag == "<CAMERA>") {
             inObjectBlock = false;
             inCameraBlock = true;
+        } else if (tag == "<LIGHT>") {
+            inObjectBlock = false;
+            inCameraBlock = false;
+            inLightBlock = true;
         } else if (tag == "</OBJECT>") {
             if (inObjectBlock) {
-                // Finaliza o bloco do objeto e carrega o modelo
                 if (!currentObject.NomeObj.empty()) {
                     currentObject.VAO = loadSimpleOBJ("../assets/Modelos3D/" + currentObject.NomeObj, currentObject.nVertices, currentObject.nomeDoMaterial);
                     currentObject.material = materiais[currentObject.nomeDoMaterial];
                     currentObject.texID = loadTexture("../assets/Modelos3D/" + currentObject.material.textureFile, currentObject.TextureimgWidth, currentObject.TextureimgHeight);
-                    
-                    // As transformações iniciais do modelo
                     currentObject.model = glm::mat4(1.0f);
-                    currentObject.AnguloRotacao = glm::radians(currentObject.AnguloRotacao);
-                    currentObject.model = glm::rotate(currentObject.model, glm::radians(currentObject.AnguloRotacao), glm::vec3(0.0f, 1.0f, 0.0f));
+                    currentObject.model = glm::translate(currentObject.model, glm::vec3(currentObject.posX, currentObject.posY, currentObject.posZ));
                     currentObject.tamanhoEscala = currentObject.tamanhoEscala;
                     currentObject.model = glm::scale(currentObject.model, glm::vec3(currentObject.tamanhoEscala));
-                    currentObject.posX = currentObject.posX;
-                    currentObject.posY = currentObject.posY;
-                    currentObject.posZ = currentObject.posZ;
-                    currentObject.model = glm::translate(currentObject.model, glm::vec3(currentObject.posX, currentObject.posY, currentObject.posZ));
 
                     objs.push_back(currentObject);
                 } else {
@@ -1175,12 +1154,18 @@ void loadSceneConfiguration(const std::string& configFilePath, std::vector<Objec
             inObjectBlock = false;
         } else if (tag == "</CAMERA>") {
             inCameraBlock = false;
+        } else if (tag == "</LIGHT>") {
+            inLightBlock = false;
         } else if (inObjectBlock) {
             if (tag == "nomeObj") {
                 ss >> currentObject.NomeObj;
-            } else if (tag == "rot") {
-                ss >> currentObject.AnguloRotacao;
-            } else if (tag == "trans") {
+            } else if (tag == "rotacaoX") {
+                ss >> currentObject.rotateX;
+            } else if (tag == "rotacaoY") {
+                ss >> currentObject.rotateY;
+            } else if (tag == "rotacaoZ") {
+                ss >> currentObject.rotateZ;
+            }else if (tag == "trans") {
                 ss >> currentObject.posX >> currentObject.posY >> currentObject.posZ;
             } else if (tag == "escala") {
                 ss >> currentObject.tamanhoEscala;
@@ -1196,6 +1181,10 @@ void loadSceneConfiguration(const std::string& configFilePath, std::vector<Objec
                 ss >> rotacaoYaw;
             } else if (tag == "pitch") {
                 ss >> rotaocaoPitch;
+            }
+        } else if (inLightBlock) { // Lendo propriedades da luz
+            if (tag == "pos") {
+                ss >> lightPos.x >> lightPos.y >> lightPos.z;
             }
         }
     }

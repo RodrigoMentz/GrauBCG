@@ -1,22 +1,15 @@
-# Segmento 1: Centro -> Meio Superior Direito -> Ponto Direita
-0.0 0.0 0.0     # P0_Seg1 (Start at center)
-10.0 0.0 15.0   # P1_Seg1 (Pull up-right)
-25.0 0.0 15.0   # P2_Seg1 (Control top of right loop)
-30.0 0.0 0.0    # P3_Seg1 (End of first segment, right-most point)
-
-# Segmento 2: Ponto Direita -> Meio Inferior Direito -> Centro
-25.0 0.0 -15.0  # P1_Seg2 (Control bottom of right loop)
-10.0 0.0 -15.0  # P2_Seg2 (Pull down-left towards center)
-
-# Segmento 3: Centro -> Meio Inferior Esquerdo -> Ponto Esquerda
-0.0 0.0 0.0     # P0_Seg3 (Same as P3_Seg2)
--10.0 0.0 -15.0 # P1_Seg3 (Pull down-left)
--25.0 0.0 -15.0 # P2_Seg3 (Control bottom of left loop)
--30.0 0.0 0.0   # P3_Seg3 (End of third segment, left-most point)
-
-# Segmento 4: Ponto Esquerda -> Meio Superior Esquerdo -> Centro
--25.0 0.0 15.0  # P1_Seg4 (Control top of left loop)
--10.0 0.0 15.0  # P2_Seg4 (Pull up-right towards center)
-0.0 0.0 0.0     # P3_Seg4 (End of fourth segment, back to center to close)
-10.0 0.0 15.0   # P1_Seg1 (Pull up-right)
-25.0 0.0 15.0   # P2_Seg1 (Control top of right loop)
+0.0 0.0 0.0
+0.0 0.0 0.0 
+10.0 15.0 0.0
+25.0 15.0 0.0
+30.0 0.0 0.0
+25.0 -15.0 0.0
+10.0 -15.0 0.0
+0.0 0.0 0.0
+-10.0 15.0 0.0
+-25.0 15.0 0.0
+-30.0 0.0 0.0
+-25.0 -15.0 0.0
+-10.0 -15.0 0.0
+0.0 0.0 0.0
+0.0 0.0 0.0

@@ -1,21 +1,38 @@
 <OBJECT>
-    nomeObj Skeletal_Stego.obj
-    rot 0.0
-    trans 0.0 0.0 0.0
-    escala 1.0
-</OBJECT>
-
-<OBJECT>
-    nomeObj Skeletal_Stego.obj
-    rot 0.0
+    nomeObj Space_Dolphinobj20.obj
+    rotacaoX 0
+    rotacaoY 0
+    rotacaoZ 0
     trans 0.0 0.0 0.0
     escala 0.5
 </OBJECT>
 
+<OBJECT>
+    nomeObj Moon.obj
+    rotacaoX 0
+    rotacaoY 1
+    rotacaoZ 1
+    trans 15.0 0.0 0.0
+    escala 0.04
+</OBJECT>
+
+<OBJECT>
+    nomeObj Moon.obj
+    rotacaoX 0
+    rotacaoY 0
+    rotacaoZ 1
+    trans -18.0 0.0 0.0
+    escala 0.04
+</OBJECT>
+
 <CAMERA>
-    pos -50.8586 19.1345 30.2106
-    front 0.823627 -0.12793 -0.567121
-    up 0.10637 0.998971 -0.0710744
-    yaw -37.45
-    pitch -0.85
+    pos 0.1364 13.8099 74.3598
+    front -0.0584351 -0.0583351 -0.997303
+    up 0-.00260017 0.998291 -0.0583772
+    yaw -92.5503
+    pitch -3.34999
 </CAMERA>
+
+<LIGHT>
+    pos 0.6 1.2 -0.5
+</LIGHT>
