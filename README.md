@@ -12,6 +12,7 @@ X para aplicar rotação em x
 Y para aplicar rotação em y  
 Z para aplicar rotação em z  
 Setinhas para transladar o objeto  
++ e - do teclado numérico para transladar em z  
 U para aumentar a escala  
 H para diminuir a escala  
   

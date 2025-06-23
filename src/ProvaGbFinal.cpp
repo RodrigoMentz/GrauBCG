@@ -152,8 +152,7 @@ void main()
     }
 })";
 
-float skyboxVertices[] = {
-    // positions          
+float skyboxVertices[] = {         
     -1.0f,  1.0f, -1.0f,
     -1.0f, -1.0f, -1.0f,
      1.0f, -1.0f, -1.0f,
@@ -427,6 +426,7 @@ int main()
         glUniform3f(glGetUniformLocation(shaderID, "fixedColor"), 1.0f, 1.0f, 1.0f);
         glDrawArrays(GL_LINE_STRIP, 0, curvaCatmull.curvePoints.size());
 
+        // Descomentar para ver o desenho dos pontos na cena
         // glBindVertexArray(VAOControl);
         // glUniform3f(glGetUniformLocation(shaderID, "fixedColor"), 0.0f, 1.0f, 0.0f);
         // glPointSize(12.0f);
